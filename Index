@@ -1,0 +1,1638 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plane Sandbox</title>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      background: #000000;
+      color: #ffffff;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+      height: 100%;
+    }
+
+    html {
+      height: 100%;
+    }
+
+    #game-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #game-canvas {
+      display: block;
+      background: #000000;
+    }
+
+    #hud {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      font-size: 18px;
+      z-index: 10;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    }
+
+    #shop-toggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: #ffffff;
+      color: #000000;
+      border: 2px solid #ffffff;
+      padding: 10px 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      cursor: pointer;
+      z-index: 10;
+      transition: all 0.2s;
+    }
+
+    #shop-toggle:hover {
+      background: #ffff00;
+      border-color: #ffff00;
+    }
+
+    #shop-modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+
+    #shop-modal.active {
+      display: flex;
+    }
+
+    #shop-content {
+      background: #000000;
+      border: 3px solid #ffffff;
+      padding: 40px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80%;
+      overflow-y: auto;
+    }
+
+    #shop-header {
+      font-size: 32px;
+      margin-bottom: 10px;
+      text-align: center;
+      color: #ffff00;
+    }
+
+    #shop-balance {
+      font-size: 18px;
+      margin-bottom: 30px;
+      text-align: center;
+      color: #00ff00;
+    }
+
+    .upgrade-item {
+      border: 2px solid #ffffff;
+      padding: 20px;
+      margin-bottom: 20px;
+      background: #111111;
+    }
+
+    .upgrade-name {
+      font-size: 20px;
+      margin-bottom: 10px;
+      color: #00ffff;
+    }
+
+    .upgrade-desc {
+      font-size: 14px;
+      margin-bottom: 10px;
+      color: #cccccc;
+    }
+
+    .upgrade-level {
+      font-size: 14px;
+      margin-bottom: 10px;
+      color: #ffffff;
+    }
+
+    .upgrade-button {
+      background: #00ff00;
+      color: #000000;
+      border: 2px solid #00ff00;
+      padding: 10px 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 10px;
+    }
+
+    .upgrade-button:hover:not(:disabled) {
+      background: #ffff00;
+      border-color: #ffff00;
+    }
+
+    .upgrade-button:disabled {
+      background: #333333;
+      color: #666666;
+      border-color: #333333;
+      cursor: not-allowed;
+    }
+
+    .upgrade-slider-container {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #333333;
+    }
+
+    .slider-label {
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: #00ff00;
+    }
+
+    .upgrade-slider {
+      width: 100%;
+      height: 8px;
+      background: #333333;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      cursor: pointer;
+    }
+
+    .upgrade-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      background: #00ff00;
+      cursor: pointer;
+      border: 2px solid #ffffff;
+    }
+
+    .upgrade-slider::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      background: #00ff00;
+      cursor: pointer;
+      border: 2px solid #ffffff;
+    }
+
+    #close-shop {
+      background: #ff0000;
+      color: #ffffff;
+      border: 2px solid #ff0000;
+      padding: 10px 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 20px;
+      width: 100%;
+      transition: all 0.2s;
+    }
+
+    #close-shop:hover {
+      background: #ff6666;
+      border-color: #ff6666;
+    }
+
+    #loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      color: #ffffff;
+    }
+
+    #passcode-modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.98);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+    }
+
+    #passcode-modal.active {
+      display: flex;
+    }
+
+    #passcode-content {
+      background: #000000;
+      border: 3px solid #00ff00;
+      padding: 40px;
+      text-align: center;
+    }
+
+    #passcode-input {
+      background: #000000;
+      border: 2px solid #00ff00;
+      color: #00ff00;
+      padding: 10px 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 24px;
+      text-align: center;
+      width: 200px;
+      margin: 20px 0;
+    }
+
+    #passcode-submit {
+      background: #00ff00;
+      color: #000000;
+      border: 2px solid #00ff00;
+      padding: 10px 30px;
+      font-family: 'Courier New', monospace;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    #passcode-submit:hover {
+      background: #00ff00;
+      box-shadow: 0 0 20px #00ff00;
+    }
+
+    #admin-panel {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 20, 0, 0.95);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 150;
+    }
+
+    #admin-panel.active {
+      display: flex;
+    }
+
+    #admin-content {
+      background: #001100;
+      border: 3px solid #00ff00;
+      padding: 40px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80%;
+      overflow-y: auto;
+    }
+
+    #admin-header {
+      font-size: 32px;
+      margin-bottom: 20px;
+      text-align: center;
+      color: #00ff00;
+    }
+
+    .admin-section {
+      border: 2px solid #00ff00;
+      padding: 20px;
+      margin-bottom: 20px;
+      background: #000000;
+    }
+
+    .admin-section-title {
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #00ff00;
+    }
+
+    .admin-input {
+      background: #000000;
+      border: 2px solid #00ff00;
+      color: #00ff00;
+      padding: 8px 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      width: 100px;
+      margin-right: 10px;
+    }
+
+    .admin-button {
+      background: #00ff00;
+      color: #000000;
+      border: 2px solid #00ff00;
+      padding: 8px 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin: 5px;
+    }
+
+    .admin-button:hover {
+      background: #66ff66;
+    }
+
+    #close-admin {
+      background: #ff0000;
+      color: #ffffff;
+      border: 2px solid #ff0000;
+      padding: 10px 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 20px;
+      width: 100%;
+      transition: all 0.2s;
+    }
+
+    #close-admin:hover {
+      background: #ff6666;
+      border-color: #ff6666;
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ 
+<meta name="NetsparkQuiltingResult" total-length="49574" removed="0" rules-found="w2655,w3390,w2577,w3012,w8897,w342,w6565,w3538,w73,w6892,w6933,w1902,w6284,w6563" />
+</head>
+ <body>
+  <div id="game-container">
+   <div id="loading">
+    LOADING...
+   </div>
+   <canvas id="game-canvas"></canvas>
+   <div id="hud">
+    <div id="game-title">
+     PLANE SANDBOX
+    </div>
+    <div>
+     COINS: <span id="coin-count">0</span>
+    </div>
+    <div>
+     SPEED: <span id="speed-display">1</span>
+    </div>
+    <div>
+     ASTEROIDS: <span id="asteroid-display">0 (NORMAL)</span>
+    </div>
+   </div><button id="shop-toggle">SHOP [S]</button>
+   <div id="shop-modal">
+    <div id="shop-content">
+     <div id="shop-header">
+      UPGRADE SHOP
+     </div>
+     <div id="shop-balance">
+      YOUR COINS: <span id="shop-coin-count">0</span>
+     </div>
+     <div id="upgrades-list"></div><button id="close-shop">CLOSE [ESC]</button>
+    </div>
+   </div>
+   <div id="passcode-modal">
+    <div id="passcode-content">
+     <div style="font-size: 24px; color: #00ff00; margin-bottom: 20px;">
+      ENTER PASSCODE
+     </div><input type="password" id="passcode-input" maxlength="4" placeholder="****"> <br><button id="passcode-submit">SUBMIT</button>
+    </div>
+   </div>
+   <div id="admin-panel">
+    <div id="admin-content">
+     <div id="admin-header">
+      ⚠ ADMIN PANEL ⚠
+     </div>
+     <div class="admin-section">
+      <div class="admin-section-title">
+       ADD COINS
+      </div><input type="number" id="coins-input" class="admin-input" placeholder="Amount" value="100"> <button id="add-coins-btn" class="admin-button">ADD COINS</button>
+     </div>
+     <div class="admin-section">
+      <div class="admin-section-title">
+       SET SPEED LEVEL
+      </div><input type="number" id="speed-input" class="admin-input" placeholder="Level" value="5" min="1"> <button id="set-speed-btn" class="admin-button">SET SPEED</button>
+     </div>
+     <div class="admin-section">
+      <div class="admin-section-title">
+       SET HANDLING LEVEL
+      </div><input type="number" id="handling-input" class="admin-input" placeholder="Level" value="5" min="1"> <button id="set-handling-btn" class="admin-button">SET HANDLING</button>
+     </div>
+     <div class="admin-section">
+      <div class="admin-section-title">
+       SET MAGNET LEVEL
+      </div><input type="number" id="magnet-input" class="admin-input" placeholder="Level" value="3" min="1"> <button id="set-magnet-btn" class="admin-button">SET MAGNET</button>
+     </div>
+     <div class="admin-section">
+      <div class="admin-section-title">
+       QUICK ACTIONS
+      </div><button id="max-all-btn" class="admin-button">MAX ALL UPGRADES</button> <button id="reset-btn" class="admin-button">RESET PROGRESS</button>
+     </div><button id="close-admin">EXIT ADMIN MODE</button>
+    </div>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      game_title: "PLANE SANDBOX",
+      shop_title: "UPGRADE SHOP",
+      background_color: "#000000",
+      text_color: "#ffffff",
+      accent_color: "#00ff00",
+      font_family: "'Courier New', monospace",
+      font_size: 16
+    };
+
+    let gameData = {
+      total_coins: 0,
+      speed_level: 1,
+      handling_level: 1,
+      magnet_level: 1
+    };
+
+    let activeUpgrades = {
+      speed: 1,
+      handling: 1,
+      magnet: 1
+    };
+
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    const loading = document.getElementById('loading');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+
+    const plane = {
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      vx: 0,
+      vy: 0,
+      angle: 0,
+      size: 20
+    };
+
+    const keys = {};
+    const coins = [];
+    const maxCoins = 15;
+    let sessionCoins = 0;
+    let shopOpen = false;
+    let adminPanelOpen = false;
+    let konamiProgress = 0;
+    const konamiCode = ['ArrowUp', 'ArrowLeft', 'ArrowRight', 'ArrowDown'];
+    
+    // Laser system
+    const lasers = [];
+    let laserChargeTime = 0;
+    let isChargingLaser = false;
+    let rainbowHue = 0;
+
+    // Asteroid system
+    const asteroids = [];
+    let asteroidsDestroyed = 0;
+    let currentAsteroidTier = 0;
+    const maxAsteroids = 5;
+
+    const asteroidTiers = [
+      { name: 'NORMAL', hp: 25, size: 30, color: '#888888', sides: 8, unlockAt: 0 },
+      { name: 'REINFORCED', hp: 50, size: 35, color: '#4444ff', sides: 9, unlockAt: 50 },
+      { name: 'ARMORED', hp: 90, size: 40, color: '#ff4444', sides: 10, unlockAt: 100 },
+      { name: 'CRYSTAL', hp: 150, size: 45, color: '#44ffff', sides: 11, unlockAt: 150 },
+      { name: 'TITANIUM', hp: 225, size: 50, color: '#ffaa00', sides: 12, unlockAt: 200 },
+      { name: 'VOID', hp: 350, size: 60, color: '#ff00ff', sides: 13, unlockAt: 250 }
+    ];
+
+    // Laser damage per tier
+    const laserDamage = {
+      0: 1,    // Red (< 30)
+      1: 2,    // White (< 70)
+      2: 4,    // Blue (< 120)
+      3: 7,    // Yellow (< 180)
+      4: 12,   // Orange (< 250)
+      5: 18,   // Purple (< 330)
+      6: 25,   // Pink (< 420)
+      7: 40,   // Rainbow (< 550)
+      8: 60,   // Intense Rainbow (< 700)
+      9: 90,   // Ultra Rainbow (< 870)
+      10: 130, // Hyper Rainbow (< 1060)
+      11: 200, // God Beam (< 1300)
+      12: 350  // Void Beam
+    };
+
+    const particles = [];
+
+    const upgrades = [
+      {
+        id: 'speed',
+        name: 'Engine Boost',
+        desc: 'Increase maximum speed',
+        baseCost: 10,
+        maxLevel: 10
+      },
+      {
+        id: 'handling',
+        name: 'Better Handling',
+        desc: 'Improve turn speed and control',
+        baseCost: 15,
+        maxLevel: 10
+      },
+      {
+        id: 'magnet',
+        name: 'Coin Magnet',
+        desc: 'Attract coins from further away',
+        baseCost: 20,
+        maxLevel: 5
+      }
+    ];
+
+    function spawnCoin() {
+      if (coins.length < maxCoins) {
+        coins.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          radius: 8,
+          collected: false
+        });
+      }
+    }
+
+    function spawnAsteroid() {
+      if (asteroids.length < maxAsteroids) {
+        // Determine current tier based on asteroids destroyed
+        let tier = 0;
+        for (let i = asteroidTiers.length - 1; i >= 0; i--) {
+          if (asteroidsDestroyed >= asteroidTiers[i].unlockAt) {
+            tier = i;
+            break;
+          }
+        }
+        currentAsteroidTier = tier;
+
+        const tierData = asteroidTiers[tier];
+        const edge = Math.floor(Math.random() * 4);
+        let x, y, vx, vy;
+
+        // Spawn from edges
+        if (edge === 0) { // Top
+          x = Math.random() * canvas.width;
+          y = -tierData.size;
+          vx = (Math.random() - 0.5) * 2;
+          vy = Math.random() * 1.5 + 0.5;
+        } else if (edge === 1) { // Right
+          x = canvas.width + tierData.size;
+          y = Math.random() * canvas.height;
+          vx = -(Math.random() * 1.5 + 0.5);
+          vy = (Math.random() - 0.5) * 2;
+        } else if (edge === 2) { // Bottom
+          x = Math.random() * canvas.width;
+          y = canvas.height + tierData.size;
+          vx = (Math.random() - 0.5) * 2;
+          vy = -(Math.random() * 1.5 + 0.5);
+        } else { // Left
+          x = -tierData.size;
+          y = Math.random() * canvas.height;
+          vx = Math.random() * 1.5 + 0.5;
+          vy = (Math.random() - 0.5) * 2;
+        }
+
+        asteroids.push({
+          x: x,
+          y: y,
+          vx: vx,
+          vy: vy,
+          rotation: Math.random() * Math.PI * 2,
+          rotationSpeed: (Math.random() - 0.5) * 0.05,
+          hp: tierData.hp,
+          maxHp: tierData.hp,
+          size: tierData.size,
+          color: tierData.color,
+          sides: tierData.sides,
+          tier: tier
+        });
+      }
+    }
+
+    function drawPlane() {
+      ctx.save();
+      ctx.translate(plane.x, plane.y);
+      ctx.rotate(plane.angle);
+      
+      // Draw charge indicator
+      if (isChargingLaser && laserChargeTime > 0) {
+        const style = getLaserColor(laserChargeTime);
+        
+        if (style.isGod) {
+          // God beam charge indicator - brilliant white light
+          const godSize = 25 + (laserChargeTime / 3);
+          
+          // Outer golden rings
+          for (let i = 0; i < 4; i++) {
+            ctx.shadowBlur = style.glow;
+            ctx.shadowColor = '#ffff00';
+            ctx.strokeStyle = `rgba(255, 255, 0, ${0.6 - i * 0.15})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, godSize + i * 20, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          
+          // Brilliant white core
+          ctx.shadowBlur = style.glow * 1.5;
+          ctx.shadowColor = '#ffffff';
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.arc(0, 0, godSize * style.pulse, 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (style.isVoid) {
+          // Void charge indicator - pulsing dark aura
+          const voidSize = 25 + (laserChargeTime / 3);
+          
+          // Outer purple rings
+          for (let i = 0; i < 3; i++) {
+            ctx.shadowBlur = style.glow;
+            ctx.shadowColor = '#ff00ff';
+            ctx.strokeStyle = `rgba(255, 0, 255, ${0.5 - i * 0.15})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, voidSize + i * 15, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          
+          // Dark core
+          ctx.shadowBlur = style.glow;
+          ctx.shadowColor = '#000000';
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(0, 0, voidSize * style.pulse, 0, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          // Normal charge indicator
+          ctx.shadowBlur = style.glow;
+          ctx.shadowColor = style.color;
+          ctx.strokeStyle = style.color;
+          ctx.lineWidth = Math.min(2 + laserChargeTime / 100, 4);
+          ctx.beginPath();
+          ctx.arc(0, 0, 25 + (laserChargeTime / 5), 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+      
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(15, 0);
+      ctx.lineTo(-10, -8);
+      ctx.lineTo(-5, 0);
+      ctx.lineTo(-10, 8);
+      ctx.closePath();
+      ctx.stroke();
+      
+      ctx.restore();
+    }
+
+    function drawCoins() {
+      coins.forEach(coin => {
+        if (!coin.collected) {
+          ctx.save();
+          ctx.translate(coin.x, coin.y);
+          ctx.rotate(coin.rotation || 0);
+          
+          // Draw hexagon
+          ctx.strokeStyle = '#ffaa00';
+          ctx.fillStyle = '#ffaa00';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI / 3) * i;
+            const x = Math.cos(angle) * coin.radius;
+            const y = Math.sin(angle) * coin.radius;
+            if (i === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          }
+          ctx.closePath();
+          ctx.stroke();
+          
+          // Draw inner detail
+          ctx.strokeStyle = '#ffaa00';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(0, 0, coin.radius * 0.5, 0, Math.PI * 2);
+          ctx.stroke();
+          
+          ctx.restore();
+          
+          // Slowly rotate the coin
+          coin.rotation = (coin.rotation || 0) + 0.02;
+        }
+      });
+    }
+
+    function createExplosion(x, y, color, size) {
+      const particleCount = 30;
+      for (let i = 0; i < particleCount; i++) {
+        const angle = (Math.PI * 2 / particleCount) * i + Math.random() * 0.3;
+        const speed = Math.random() * 5 + 2;
+        particles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 60,
+          maxLife: 60,
+          size: Math.random() * 4 + 2,
+          color: color
+        });
+      }
+      
+      // Add ring particles
+      for (let i = 0; i < 15; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 3 + 5;
+        particles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 40,
+          maxLife: 40,
+          size: Math.random() * 3 + 1,
+          color: '#ffffff'
+        });
+      }
+    }
+
+    function drawParticles() {
+      particles.forEach((particle, index) => {
+        const alpha = particle.life / particle.maxLife;
+        ctx.fillStyle = particle.color;
+        ctx.globalAlpha = alpha;
+        
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        ctx.fill();
+        
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+        particle.life--;
+        
+        if (particle.life <= 0) {
+          particles.splice(index, 1);
+        }
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    function drawAsteroids() {
+      asteroids.forEach(asteroid => {
+        ctx.save();
+        ctx.translate(asteroid.x, asteroid.y);
+        ctx.rotate(asteroid.rotation);
+
+        // Create irregular vertices for natural look
+        if (!asteroid.vertices) {
+          asteroid.vertices = [];
+          for (let i = 0; i < asteroid.sides; i++) {
+            const angle = (Math.PI * 2 / asteroid.sides) * i;
+            const variance = 0.6 + Math.random() * 0.5; // Random size variation
+            asteroid.vertices.push({
+              angle: angle,
+              distance: asteroid.size * variance
+            });
+          }
+        }
+
+        // Draw outline asteroid
+        ctx.strokeStyle = asteroid.color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        asteroid.vertices.forEach((vertex, i) => {
+          const x = Math.cos(vertex.angle) * vertex.distance;
+          const y = Math.sin(vertex.angle) * vertex.distance;
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        });
+        ctx.closePath();
+        ctx.stroke();
+
+
+
+        // Draw HP bar
+        const hpPercent = asteroid.hp / asteroid.maxHp;
+        const barWidth = asteroid.size * 1.8;
+        const barHeight = 6;
+        const barY = asteroid.size + 20;
+
+        // Background
+        ctx.fillStyle = '#222222';
+        ctx.fillRect(-barWidth / 2, barY, barWidth, barHeight);
+        
+        // HP bar with gradient
+        const gradient = ctx.createLinearGradient(-barWidth / 2, 0, barWidth / 2, 0);
+        if (hpPercent > 0.5) {
+          gradient.addColorStop(0, '#00ff00');
+          gradient.addColorStop(1, '#88ff00');
+        } else if (hpPercent > 0.25) {
+          gradient.addColorStop(0, '#ffff00');
+          gradient.addColorStop(1, '#ffaa00');
+        } else {
+          gradient.addColorStop(0, '#ff4400');
+          gradient.addColorStop(1, '#ff0000');
+        }
+        ctx.fillStyle = gradient;
+        ctx.fillRect(-barWidth / 2, barY, barWidth * hpPercent, barHeight);
+        
+        // HP bar border
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-barWidth / 2, barY, barWidth, barHeight);
+
+        ctx.restore();
+
+        // Update asteroid
+        asteroid.x += asteroid.vx;
+        asteroid.y += asteroid.vy;
+        asteroid.rotation += asteroid.rotationSpeed;
+
+        // Wrap around screen
+        if (asteroid.x < -asteroid.size * 2) asteroid.x = canvas.width + asteroid.size;
+        if (asteroid.x > canvas.width + asteroid.size * 2) asteroid.x = -asteroid.size;
+        if (asteroid.y < -asteroid.size * 2) asteroid.y = canvas.height + asteroid.size;
+        if (asteroid.y > canvas.height + asteroid.size * 2) asteroid.y = -asteroid.size;
+      });
+    }
+
+    function getLaserTier(chargeTime) {
+      if (chargeTime < 30) return 0;
+      if (chargeTime < 70) return 1;
+      if (chargeTime < 120) return 2;
+      if (chargeTime < 180) return 3;
+      if (chargeTime < 250) return 4;
+      if (chargeTime < 330) return 5;
+      if (chargeTime < 420) return 6;
+      if (chargeTime < 550) return 7;
+      if (chargeTime < 700) return 8;
+      if (chargeTime < 870) return 9;
+      if (chargeTime < 1060) return 10;
+      if (chargeTime < 1300) return 11;
+      return 12;
+    }
+
+    function getLaserColor(chargeTime) {
+      if (chargeTime < 30) return { color: '#ff0000', width: 3, glow: 5, tier: 0 }; // Red
+      if (chargeTime < 70) return { color: '#ffffff', width: 5, glow: 10, tier: 1 }; // White
+      if (chargeTime < 120) return { color: '#00ffff', width: 7, glow: 15, tier: 2 }; // Blue
+      if (chargeTime < 180) return { color: '#ffff00', width: 9, glow: 20, tier: 3 }; // Yellow
+      if (chargeTime < 250) return { color: '#ff8800', width: 11, glow: 25, tier: 4 }; // Orange
+      if (chargeTime < 330) return { color: '#8800ff', width: 13, glow: 30, tier: 5 }; // Purple
+      if (chargeTime < 420) return { color: '#ff00ff', width: 15, glow: 35, tier: 6 }; // Pink
+      if (chargeTime < 550) {
+        // Rainbow
+        rainbowHue = (rainbowHue + 5) % 360;
+        return { color: `hsl(${rainbowHue}, 100%, 50%)`, width: 20, glow: 50, tier: 7 };
+      }
+      if (chargeTime < 700) {
+        // Intense Rainbow
+        rainbowHue = (rainbowHue + 10) % 360;
+        return { color: `hsl(${rainbowHue}, 100%, 50%)`, width: 25, glow: 60, tier: 8 };
+      }
+      if (chargeTime < 870) {
+        // Ultra Rainbow
+        rainbowHue = (rainbowHue + 15) % 360;
+        return { color: `hsl(${rainbowHue}, 100%, 60%)`, width: 30, glow: 70, tier: 9 };
+      }
+      if (chargeTime < 1060) {
+        // Hyper Rainbow
+        rainbowHue = (rainbowHue + 20) % 360;
+        return { color: `hsl(${rainbowHue}, 100%, 70%)`, width: 35, glow: 80, tier: 10 };
+      }
+      if (chargeTime < 1300) {
+        // GOD BEAM - Blinding divine light
+        const godPulse = Math.sin(Date.now() / 80) * 0.4 + 1.0;
+        return { color: '#ffffff', width: 50 + chargeTime * 0.15, glow: 150, isGod: true, pulse: godPulse, tier: 11 };
+      }
+      // MAX VOID BEAM - Pure darkness with crackling energy
+      const voidPulse = Math.sin(Date.now() / 100) * 0.3 + 0.7;
+      return { color: '#000000', width: 60 + chargeTime * 0.1, glow: 120, isVoid: true, pulse: voidPulse, tier: 12 };
+    }
+
+    function drawLasers() {
+      lasers.forEach((laser, index) => {
+        const style = getLaserColor(laser.chargeTime);
+        
+        // Gently curve towards nearby asteroids
+        let closestAsteroid = null;
+        let closestDistance = Infinity;
+        
+        asteroids.forEach(asteroid => {
+          const dx = asteroid.x - laser.x;
+          const dy = asteroid.y - laser.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          if (distance < closestDistance && distance < 150) {
+            closestDistance = distance;
+            closestAsteroid = asteroid;
+          }
+        });
+        
+        if (closestAsteroid) {
+          const dx = closestAsteroid.x - laser.x;
+          const dy = closestAsteroid.y - laser.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          // Apply gentle attraction force (not direct turning)
+          const attractionStrength = 0.15 * (1 - distance / 150); // Stronger when closer
+          laser.vx += (dx / distance) * attractionStrength;
+          laser.vy += (dy / distance) * attractionStrength;
+          
+          // Maintain speed
+          const speed = 15;
+          const currentSpeed = Math.sqrt(laser.vx * laser.vx + laser.vy * laser.vy);
+          laser.vx = (laser.vx / currentSpeed) * speed;
+          laser.vy = (laser.vy / currentSpeed) * speed;
+        }
+        
+        ctx.save();
+        
+        // Special god beam rendering
+        if (style.isGod) {
+          // Draw outer golden radiance
+          for (let i = 0; i < 4; i++) {
+            ctx.shadowBlur = style.glow;
+            ctx.shadowColor = '#ffff00';
+            ctx.strokeStyle = `rgba(255, 255, 0, ${0.4 - i * 0.1})`;
+            ctx.lineWidth = style.width + i * 15;
+            ctx.lineCap = 'round';
+            
+            ctx.beginPath();
+            ctx.moveTo(laser.x, laser.y);
+            ctx.lineTo(laser.endX, laser.endY);
+            ctx.stroke();
+          }
+          
+          // Draw brilliant white core
+          ctx.shadowBlur = style.glow * 2;
+          ctx.shadowColor = '#ffffff';
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = style.width * style.pulse;
+          ctx.lineCap = 'round';
+          
+          ctx.beginPath();
+          ctx.moveTo(laser.x, laser.y);
+          ctx.lineTo(laser.endX, laser.endY);
+          ctx.stroke();
+          
+          // Draw inner golden light
+          ctx.shadowBlur = 50;
+          ctx.shadowColor = '#ffff00';
+          ctx.strokeStyle = '#ffff00';
+          ctx.lineWidth = style.width * 0.3;
+          
+          ctx.beginPath();
+          ctx.moveTo(laser.x, laser.y);
+          ctx.lineTo(laser.endX, laser.endY);
+          ctx.stroke();
+        } else if (style.isVoid) {
+          // Draw outer crackling energy
+          for (let i = 0; i < 3; i++) {
+            ctx.shadowBlur = style.glow;
+            ctx.shadowColor = '#ff00ff';
+            ctx.strokeStyle = `rgba(255, 0, 255, ${0.3 - i * 0.1})`;
+            ctx.lineWidth = style.width + i * 10;
+            ctx.lineCap = 'round';
+            
+            ctx.beginPath();
+            ctx.moveTo(laser.x, laser.y);
+            ctx.lineTo(laser.endX, laser.endY);
+            ctx.stroke();
+          }
+          
+          // Draw dark void core
+          ctx.shadowBlur = style.glow * 1.5;
+          ctx.shadowColor = '#000000';
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = style.width * style.pulse;
+          ctx.lineCap = 'round';
+          
+          ctx.beginPath();
+          ctx.moveTo(laser.x, laser.y);
+          ctx.lineTo(laser.endX, laser.endY);
+          ctx.stroke();
+          
+          // Draw white core
+          ctx.shadowBlur = 30;
+          ctx.shadowColor = '#ffffff';
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = style.width * 0.2;
+          
+          ctx.beginPath();
+          ctx.moveTo(laser.x, laser.y);
+          ctx.lineTo(laser.endX, laser.endY);
+          ctx.stroke();
+        } else {
+          // Normal laser rendering
+          ctx.shadowBlur = style.glow;
+          ctx.shadowColor = style.color;
+          ctx.strokeStyle = style.color;
+          ctx.lineWidth = style.width;
+          ctx.lineCap = 'round';
+          
+          ctx.beginPath();
+          ctx.moveTo(laser.x, laser.y);
+          ctx.lineTo(laser.endX, laser.endY);
+          ctx.stroke();
+        }
+        
+        ctx.restore();
+        
+        // Update laser position
+        laser.x += laser.vx;
+        laser.y += laser.vy;
+        laser.endX += laser.vx;
+        laser.endY += laser.vy;
+        laser.life--;
+        
+        // Remove dead lasers
+        if (laser.life <= 0 || laser.x < 0 || laser.x > canvas.width || laser.y < 0 || laser.y > canvas.height) {
+          lasers.splice(index, 1);
+        }
+      });
+    }
+
+    function shootLaser(chargeTime) {
+      const speed = 15;
+      const length = 30 + chargeTime * 2;
+      
+      const vx = Math.cos(plane.angle) * speed;
+      const vy = Math.sin(plane.angle) * speed;
+      
+      lasers.push({
+        x: plane.x + Math.cos(plane.angle) * 20,
+        y: plane.y + Math.sin(plane.angle) * 20,
+        endX: plane.x + Math.cos(plane.angle) * (20 + length),
+        endY: plane.y + Math.sin(plane.angle) * (20 + length),
+        vx: vx,
+        vy: vy,
+        life: 60,
+        chargeTime: chargeTime,
+        tier: getLaserTier(chargeTime),
+        hit: false
+      });
+    }
+
+    function updatePlane() {
+      const speedMultiplier = 1 + (activeUpgrades.speed - 1) * 0.3;
+      const handlingMultiplier = 1 + (activeUpgrades.handling - 1) * 0.2;
+      const acceleration = 0.3 * speedMultiplier;
+      const maxSpeed = 5 * speedMultiplier;
+      const turnSpeed = 0.08 * handlingMultiplier;
+      const friction = 0.98;
+
+      let targetAngle = plane.angle;
+
+      if (keys['ArrowLeft'] || keys['KeyA']) {
+        targetAngle -= turnSpeed;
+      }
+      if (keys['ArrowRight'] || keys['KeyD']) {
+        targetAngle += turnSpeed;
+      }
+
+      plane.angle = targetAngle;
+
+      if (keys['ArrowUp']) {
+        plane.vx += Math.cos(plane.angle) * acceleration;
+        plane.vy += Math.sin(plane.angle) * acceleration;
+      }
+      if (keys['ArrowDown'] || keys['KeyS']) {
+        plane.vx -= Math.cos(plane.angle) * acceleration * 0.5;
+        plane.vy -= Math.sin(plane.angle) * acceleration * 0.5;
+      }
+
+      // Handle laser charging - no limit!
+      if (keys['Space'] && !shopOpen) {
+        isChargingLaser = true;
+        laserChargeTime += 1;
+      }
+
+      const speed = Math.sqrt(plane.vx * plane.vx + plane.vy * plane.vy);
+      if (speed > maxSpeed) {
+        plane.vx = (plane.vx / speed) * maxSpeed;
+        plane.vy = (plane.vy / speed) * maxSpeed;
+      }
+
+      plane.vx *= friction;
+      plane.vy *= friction;
+
+      plane.x += plane.vx;
+      plane.y += plane.vy;
+
+      if (plane.x < 0) plane.x = canvas.width;
+      if (plane.x > canvas.width) plane.x = 0;
+      if (plane.y < 0) plane.y = canvas.height;
+      if (plane.y > canvas.height) plane.y = 0;
+    }
+
+    function checkCollisions() {
+      const magnetRange = 50 + (activeUpgrades.magnet - 1) * 30;
+      
+      coins.forEach((coin, index) => {
+        if (coin.collected) return;
+
+        const dx = plane.x - coin.x;
+        const dy = plane.y - coin.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < magnetRange && distance > plane.size) {
+          coin.x += dx * 0.1;
+          coin.y += dy * 0.1;
+        }
+
+        if (distance < plane.size + coin.radius) {
+          coin.collected = true;
+          sessionCoins++;
+          coins.splice(index, 1);
+          spawnCoin();
+        }
+      });
+
+      // Check laser-asteroid collisions
+      for (let laserIndex = lasers.length - 1; laserIndex >= 0; laserIndex--) {
+        const laser = lasers[laserIndex];
+        
+        for (let asteroidIndex = asteroids.length - 1; asteroidIndex >= 0; asteroidIndex--) {
+          const asteroid = asteroids[asteroidIndex];
+          
+          // Check if laser line intersects with asteroid
+          const dx = asteroid.x - laser.x;
+          const dy = asteroid.y - laser.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance < asteroid.size) {
+            const damage = laserDamage[laser.tier] || 1;
+            asteroid.hp -= damage;
+
+            if (asteroid.hp <= 0) {
+              // Create explosion
+              createExplosion(asteroid.x, asteroid.y, asteroid.color, asteroid.size);
+              
+              // Asteroid destroyed
+              asteroids.splice(asteroidIndex, 1);
+              asteroidsDestroyed++;
+              sessionCoins += 15;
+              spawnAsteroid();
+            }
+            
+            // Remove laser after hit
+            lasers.splice(laserIndex, 1);
+            break; // Exit asteroid loop since laser is destroyed
+          }
+        }
+      }
+    }
+
+    function updateHUD() {
+      document.getElementById('coin-count').textContent = sessionCoins;
+      document.getElementById('speed-display').textContent = gameData.speed_level;
+      
+      const asteroidDisplay = document.getElementById('asteroid-display');
+      if (asteroidDisplay) {
+        const currentTierData = asteroidTiers[currentAsteroidTier];
+        asteroidDisplay.textContent = `${asteroidsDestroyed} (${currentTierData.name})`;
+      }
+    }
+
+    function renderShop() {
+      const upgradesList = document.getElementById('upgrades-list');
+      upgradesList.innerHTML = '';
+
+      upgrades.forEach(upgrade => {
+        const level = gameData[upgrade.id + '_level'];
+        const cost = Math.floor(upgrade.baseCost * Math.pow(1.5, level - 1));
+        const canAfford = sessionCoins >= cost;
+        const maxed = level >= upgrade.maxLevel;
+        const activeLevel = activeUpgrades[upgrade.id];
+
+        const div = document.createElement('div');
+        div.className = 'upgrade-item';
+        div.innerHTML = `
+          <div class="upgrade-name">${upgrade.name}</div>
+          <div class="upgrade-desc">${upgrade.desc}</div>
+          <div class="upgrade-level">LEVEL: ${level}/${upgrade.maxLevel}</div>
+          <button class="upgrade-button" 
+                  data-upgrade="${upgrade.id}" 
+                  data-cost="${cost}"
+                  ${!canAfford || maxed ? 'disabled' : ''}>
+            ${maxed ? 'MAX LEVEL' : `UPGRADE - ${cost} COINS`}
+          </button>
+          ${level > 1 ? `
+          <div class="upgrade-slider-container">
+            <div class="slider-label">ACTIVE LEVEL: <span id="active-${upgrade.id}">${activeLevel}</span> / ${level}</div>
+            <input type="range" 
+                   class="upgrade-slider" 
+                   min="1" 
+                   max="${level}" 
+                   value="${activeLevel}"
+                   data-upgrade-id="${upgrade.id}">
+          </div>
+          ` : ''}
+        `;
+        upgradesList.appendChild(div);
+      });
+
+      document.getElementById('shop-coin-count').textContent = sessionCoins;
+    }
+
+    async function purchaseUpgrade(upgradeId, cost) {
+      if (sessionCoins >= cost) {
+        const loadingBtn = event.target;
+        loadingBtn.textContent = 'UPGRADING...';
+        loadingBtn.disabled = true;
+
+        sessionCoins -= cost;
+        gameData[upgradeId + '_level']++;
+
+        const updateData = {
+          total_coins: gameData.total_coins + sessionCoins,
+          speed_level: gameData.speed_level,
+          handling_level: gameData.handling_level,
+          magnet_level: gameData.magnet_level
+        };
+
+        const result = await window.dataSdk.update({
+          ...updateData,
+          __backendId: gameData.__backendId
+        });
+
+        if (result.isOk) {
+          activeUpgrades[upgradeId] = gameData[upgradeId + '_level'];
+          renderShop();
+          updateHUD();
+        } else {
+          sessionCoins += cost;
+          gameData[upgradeId + '_level']--;
+          loadingBtn.textContent = 'ERROR - TRY AGAIN';
+          loadingBtn.disabled = false;
+        }
+      }
+    }
+
+    async function adminAddCoins(amount) {
+      sessionCoins += amount;
+      updateHUD();
+    }
+
+    async function adminSetUpgrade(upgradeId, level) {
+      level = Math.max(1, level);
+      
+      gameData[upgradeId + '_level'] = level;
+      activeUpgrades[upgradeId] = level;
+
+      const result = await window.dataSdk.update({
+        total_coins: gameData.total_coins,
+        speed_level: gameData.speed_level,
+        handling_level: gameData.handling_level,
+        magnet_level: gameData.magnet_level,
+        __backendId: gameData.__backendId
+      });
+
+      if (result.isOk) {
+        updateHUD();
+        if (shopOpen) renderShop();
+      }
+    }
+
+    async function adminMaxAll() {
+      gameData.speed_level = 10;
+      gameData.handling_level = 10;
+      gameData.magnet_level = 5;
+      activeUpgrades.speed = 10;
+      activeUpgrades.handling = 10;
+      activeUpgrades.magnet = 5;
+
+      const result = await window.dataSdk.update({
+        total_coins: gameData.total_coins,
+        speed_level: 10,
+        handling_level: 10,
+        magnet_level: 5,
+        __backendId: gameData.__backendId
+      });
+
+      if (result.isOk) {
+        updateHUD();
+        if (shopOpen) renderShop();
+      }
+    }
+
+    async function adminReset() {
+      gameData.speed_level = 1;
+      gameData.handling_level = 1;
+      gameData.magnet_level = 1;
+      activeUpgrades.speed = 1;
+      activeUpgrades.handling = 1;
+      activeUpgrades.magnet = 1;
+      sessionCoins = 0;
+
+      const result = await window.dataSdk.update({
+        total_coins: 0,
+        speed_level: 1,
+        handling_level: 1,
+        magnet_level: 1,
+        __backendId: gameData.__backendId
+      });
+
+      if (result.isOk) {
+        updateHUD();
+        if (shopOpen) renderShop();
+      }
+    }
+
+    function toggleShop() {
+      shopOpen = !shopOpen;
+      document.getElementById('shop-modal').classList.toggle('active', shopOpen);
+      if (shopOpen) {
+        renderShop();
+      }
+    }
+
+    function gameLoop() {
+      ctx.fillStyle = defaultConfig.background_color;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      updatePlane();
+      checkCollisions();
+      drawLasers();
+      drawAsteroids();
+      drawParticles();
+      drawCoins();
+      drawPlane();
+      updateHUD();
+
+      if (!shopOpen) {
+        requestAnimationFrame(gameLoop);
+      } else {
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      // Check for konami code sequence
+      if (!document.getElementById('passcode-modal').classList.contains('active')) {
+        if (e.code === konamiCode[konamiProgress]) {
+          konamiProgress++;
+          if (konamiProgress === konamiCode.length) {
+            konamiProgress = 0;
+            document.getElementById('passcode-modal').classList.add('active');
+            document.getElementById('passcode-input').value = '';
+            document.getElementById('passcode-input').focus();
+            return;
+          }
+        } else {
+          konamiProgress = 0;
+        }
+      }
+
+      keys[e.code] = true;
+      
+      if (e.code === 'KeyS' && !keys['ArrowDown']) {
+        if (!e.repeat) toggleShop();
+      }
+      if (e.code === 'Escape') {
+        shopOpen = false;
+        document.getElementById('shop-modal').classList.remove('active');
+        if (adminPanelOpen) {
+          adminPanelOpen = false;
+          document.getElementById('admin-panel').classList.remove('active');
+        }
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keys[e.code] = false;
+      
+      // Fire laser when Space is released
+      if (e.code === 'Space' && isChargingLaser) {
+        shootLaser(laserChargeTime);
+        isChargingLaser = false;
+        laserChargeTime = 0;
+      }
+    });
+
+    document.getElementById('shop-toggle').addEventListener('click', toggleShop);
+    document.getElementById('close-shop').addEventListener('click', toggleShop);
+
+    document.getElementById('upgrades-list').addEventListener('click', (e) => {
+      if (e.target.classList.contains('upgrade-button') && !e.target.disabled) {
+        const upgradeId = e.target.dataset.upgrade;
+        const cost = parseInt(e.target.dataset.cost);
+        purchaseUpgrade(upgradeId, cost);
+      }
+    });
+
+    document.getElementById('upgrades-list').addEventListener('input', (e) => {
+      if (e.target.classList.contains('upgrade-slider')) {
+        const upgradeId = e.target.dataset.upgradeId;
+        const value = parseInt(e.target.value);
+        activeUpgrades[upgradeId] = value;
+        const label = document.getElementById('active-' + upgradeId);
+        if (label) {
+          label.textContent = value;
+        }
+      }
+    });
+
+    // Passcode modal
+    document.getElementById('passcode-submit').addEventListener('click', () => {
+      const input = document.getElementById('passcode-input').value;
+      if (input === '5411') {
+        document.getElementById('passcode-modal').classList.remove('active');
+        adminPanelOpen = true;
+        document.getElementById('admin-panel').classList.add('active');
+      } else {
+        document.getElementById('passcode-input').value = '';
+        document.getElementById('passcode-input').style.borderColor = '#ff0000';
+        setTimeout(() => {
+          document.getElementById('passcode-input').style.borderColor = '#00ff00';
+        }, 500);
+      }
+    });
+
+    document.getElementById('passcode-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('passcode-submit').click();
+      }
+    });
+
+    // Admin panel buttons
+    document.getElementById('add-coins-btn').addEventListener('click', () => {
+      const amount = parseInt(document.getElementById('coins-input').value) || 0;
+      adminAddCoins(amount);
+    });
+
+    document.getElementById('set-speed-btn').addEventListener('click', () => {
+      const level = parseInt(document.getElementById('speed-input').value) || 1;
+      adminSetUpgrade('speed', level);
+    });
+
+    document.getElementById('set-handling-btn').addEventListener('click', () => {
+      const level = parseInt(document.getElementById('handling-input').value) || 1;
+      adminSetUpgrade('handling', level);
+    });
+
+    document.getElementById('set-magnet-btn').addEventListener('click', () => {
+      const level = parseInt(document.getElementById('magnet-input').value) || 1;
+      adminSetUpgrade('magnet', level);
+    });
+
+    document.getElementById('max-all-btn').addEventListener('click', () => {
+      adminMaxAll();
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      adminReset();
+    });
+
+    document.getElementById('close-admin').addEventListener('click', () => {
+      adminPanelOpen = false;
+      document.getElementById('admin-panel').classList.remove('active');
+    });
+
+    const dataHandler = {
+      onDataChanged(data) {
+        if (data.length > 0) {
+          gameData = data[0];
+          sessionCoins = 0;
+          activeUpgrades.speed = gameData.speed_level;
+          activeUpgrades.handling = gameData.handling_level;
+          activeUpgrades.magnet = gameData.magnet_level;
+        }
+        updateHUD();
+      }
+    };
+
+    async function initGame() {
+      const initResult = await window.dataSdk.init(dataHandler);
+      
+      if (!initResult.isOk) {
+        loading.textContent = 'ERROR LOADING GAME';
+        return;
+      }
+
+      const existingData = window.dataSdk.config || [];
+      
+      if (existingData.length === 0) {
+        const createResult = await window.dataSdk.create({
+          total_coins: 0,
+          speed_level: 1,
+          handling_level: 1,
+          magnet_level: 1
+        });
+
+        if (!createResult.isOk) {
+          loading.textContent = 'ERROR CREATING SAVE';
+          return;
+        }
+      }
+
+      for (let i = 0; i < maxCoins; i++) {
+        spawnCoin();
+      }
+
+      for (let i = 0; i < maxAsteroids; i++) {
+        spawnAsteroid();
+      }
+
+      loading.style.display = 'none';
+      gameLoop();
+    }
+
+    async function onConfigChange(config) {
+      const gameTitle = config.game_title || defaultConfig.game_title;
+      const shopTitle = config.shop_title || defaultConfig.shop_title;
+      const backgroundColor = config.background_color || defaultConfig.background_color;
+      const textColor = config.text_color || defaultConfig.text_color;
+      const fontFamily = config.font_family || defaultConfig.font_family;
+      const fontSize = config.font_size || defaultConfig.font_size;
+
+      document.getElementById('game-title').textContent = gameTitle;
+      document.getElementById('shop-header').textContent = shopTitle;
+      document.body.style.backgroundColor = backgroundColor;
+      document.body.style.color = textColor;
+      document.body.style.fontFamily = fontFamily;
+      document.body.style.fontSize = `${fontSize}px`;
+      canvas.style.backgroundColor = backgroundColor;
+    }
+
+    window.elementSdk.init({
+      defaultConfig,
+      onConfigChange,
+      mapToCapabilities: (config) => ({
+        recolorables: [
+          {
+            get: () => config.background_color || defaultConfig.background_color,
+            set: (value) => {
+              config.background_color = value;
+              window.elementSdk.setConfig({ background_color: value });
+            }
+          },
+          {
+            get: () => config.text_color || defaultConfig.text_color,
+            set: (value) => {
+              config.text_color = value;
+              window.elementSdk.setConfig({ text_color: value });
+            }
+          },
+          {
+            get: () => config.accent_color || defaultConfig.accent_color,
+            set: (value) => {
+              config.accent_color = value;
+              window.elementSdk.setConfig({ accent_color: value });
+            }
+          }
+        ],
+        borderables: [],
+        fontEditable: {
+          get: () => config.font_family || defaultConfig.font_family,
+          set: (value) => {
+            config.font_family = value;
+            window.elementSdk.setConfig({ font_family: value });
+          }
+        },
+        fontSizeable: {
+          get: () => config.font_size || defaultConfig.font_size,
+          set: (value) => {
+            config.font_size = value;
+            window.elementSdk.setConfig({ font_size: value });
+          }
+        }
+      }),
+      mapToEditPanelValues: (config) => new Map([
+        ["game_title", config.game_title || defaultConfig.game_title],
+        ["shop_title", config.shop_title || defaultConfig.shop_title]
+      ])
+    });
+
+    initGame();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ac28ff1535c76d9',t:'MTc2NTQzMDczNS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
